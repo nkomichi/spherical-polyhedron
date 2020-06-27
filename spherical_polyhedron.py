@@ -19,11 +19,16 @@ def distance(point_from, point_to):
 
 class SphericalPolyhedron():
     """球のクラス"""
-    def __init__(self, center=np.array([0.0, 0.0, 0.0]), radius=1.0, points=0):
+    def __init__(self, points=0, center=np.array([0.0, 0.0, 0.0]), radius=1.0):
         self.center, self.radius = center, float(radius)
-        self.points = np.empty((0, 3))
-        self.add_random_point(0)
+        self.points = np.empty([0, 3])
+        self.number_of_points = 0
+        for i in range(points):
+            self.add_random_point()
         self.step = 0
+        self.constant = -0.01
+        self.power = 2
+        self.cutoff = 2
 
     def plot(self, elev=30, azim=30):
         fig = plt.figure(figsize=(10, 10))
@@ -38,28 +43,16 @@ class SphericalPolyhedron():
         ax.view_init(elev=elev, azim=azim)
         plt.show()
 
-    def add_random_point(self, number=1):
-        """numberの数だけ球面上にランダムな点を加える"""
-        for _ in range(number):
-            # theta = random.random() * math.pi
-            phi = random.random() * math.pi * 2
-            z = random.random() * 2 - 1
-            self.points = np.append(
-                self.points,
-                [[self.radius * math.sqrt(1 - (z ** 2)) * math.cos(phi),
-                  self.radius * math.sqrt(1 - (z ** 2)) * math.sin(phi),
-                  self.radius * z]],
-                axis=0)
-
-    def bind_point_on_surface(self, point: np.ndarray) -> np.ndarray:
-        """点を受け取りその点を球面上に落とした点を返す"""
-        factor = self.radius / distance(point, self.center)
-        return point * factor
-
-    def bind_all_points(self):
-        """全ての点を球面上に落とす"""
-        for i, point in enumerate(self.points):
-            self.points[i] = self.bind_point_on_surface(point)
+    def add_random_point(self):
+        """球面上にランダムな点を1点加える"""
+        phi = random.random() * math.pi * 2
+        z = random.random() * 2 - 1
+        self.points = np.append(
+            self.points,
+            [[self.radius * math.sqrt(1 - (z ** 2)) * math.cos(phi),
+              self.radius * math.sqrt(1 - (z ** 2)) * math.sin(phi),
+              self.radius * z]],
+            axis=0)
 
     def bind_on_surface(self):
         distances = np.linalg.norm(self.points - self.center, axis=1, keepdims=True)
@@ -69,8 +62,14 @@ class SphericalPolyhedron():
         """全点の重心を球の中心と一致させる"""
         self.points += self.center - self.points.mean(axis=0)
 
-    def proceed(self, constant=-1, power=2, cutoff=2.0, snap=True, bind=True):
+    def move(self, constant=None, power=None, cutoff=None):
         """全ての点に対し距離のpower乗に反比例し、constantが正なら引力、負なら斥力"""
+        if constant is None:
+            constant = self.constant
+        if power is None:
+            power = self.power
+        if cutoff is None:
+            cutoff = self.cutoff
         new_points = np.empty([len(self.points), 3])
         for i, point in enumerate(self.points):
             vector = np.array([0.0, 0.0, 0.0])
@@ -85,6 +84,9 @@ class SphericalPolyhedron():
             new_points[i] = point + vector
         logger.debug("new_points=%s", new_points)
         self.points = new_points
+
+    def proceed(self, snap=True, bind=True):
+        self.move()
         if snap:
             self.snap_to_center()
         if bind:
