@@ -2,6 +2,7 @@ import math
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.spatial.distance import pdist, squareform
 from scipy.spatial import SphericalVoronoi
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib import colors
@@ -9,12 +10,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def distance(point_from, point_to):
-    return math.sqrt((point_from[0] - point_to[0]) ** 2
-                     + (point_from[1] - point_to[1]) ** 2
-                     + (point_from[2] - point_to[2]) ** 2)
 
 
 class SphericalPolyhedron():
@@ -63,6 +58,40 @@ class SphericalPolyhedron():
         self.points += self.center - self.points.mean(axis=0)
 
     def move(self, constant=None, power=None, cutoff=None):
+        """全ての点に対し距離のpower乗に反比例し、constantが正なら引力、負なら斥力"""
+        if constant is None:
+            constant = self.constant
+        if power is None:
+            power = self.power
+        if cutoff is None:
+            cutoff = self.cutoff
+        # 点同士の距離行列
+        distance_matrix = squareform(pdist(self.points))[:, :, np.newaxis]
+        # 自己要素とカットオフ距離を超える要素をNaNにする
+        distance_matrix = np.where(
+            distance_matrix != 0,
+            distance_matrix,
+            np.nan)
+        distance_matrix = np.where(
+            distance_matrix < cutoff,
+            distance_matrix,
+            np.nan)
+        # 逆数化する
+        factor_matrix = np.nan_to_num(1 / distance_matrix)
+        # 点同士の方向ベクトルの行列
+        raw_vector_matrix = self.points[np.newaxis, :] - self.points[:, np.newaxis]
+        # 方向ベクトルの大きさを1に正規化
+        normalized_vector_matrix = raw_vector_matrix * factor_matrix
+        # 様々な処理
+        vector_matrix = normalized_vector_matrix * (factor_matrix ** power) * constant
+        # 方向ベクトルを合成
+        vector_array = vector_matrix.sum(axis=1)
+        # 球面に接する平面上に正射影（いつか）
+
+        # 点の座標に加算
+        self.points += vector_array
+
+    def move_old(self, constant=None, power=None, cutoff=None):
         """全ての点に対し距離のpower乗に反比例し、constantが正なら引力、負なら斥力"""
         if constant is None:
             constant = self.constant
