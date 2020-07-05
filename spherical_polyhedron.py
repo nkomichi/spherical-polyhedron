@@ -50,7 +50,10 @@ class SphericalPolyhedron():
             axis=0)
 
     def bind_on_surface(self):
-        distances = np.linalg.norm(self.points - self.center, axis=1, keepdims=True)
+        distances = np.linalg.norm(
+            self.points - self.center,
+            axis=1,
+            keepdims=True)
         self.points = self.points / distances * self.radius
 
     def snap_to_center(self):
@@ -79,11 +82,13 @@ class SphericalPolyhedron():
         # 逆数化する
         factor_matrix = np.nan_to_num(1 / distance_matrix)
         # 点同士の方向ベクトルの行列
-        raw_vector_matrix = self.points[np.newaxis, :] - self.points[:, np.newaxis]
+        raw_vector_matrix = self.points[np.newaxis, :]\
+            - self.points[:, np.newaxis]
         # 方向ベクトルの大きさを1に正規化
         normalized_vector_matrix = raw_vector_matrix * factor_matrix
         # 様々な処理
-        vector_matrix = normalized_vector_matrix * (factor_matrix ** power) * constant
+        vector_matrix = normalized_vector_matrix\
+            * (factor_matrix ** power) * constant
         # 方向ベクトルを合成
         vector_array = vector_matrix.sum(axis=1)
         # 球面に接する平面上に正射影（いつか）
