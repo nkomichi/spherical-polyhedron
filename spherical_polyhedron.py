@@ -92,7 +92,6 @@ class SphericalPolyhedron():
         # 方向ベクトルを合成
         vector_array = vector_matrix.sum(axis=1)
         # 球面に接する平面上に正射影（いつか）
-
         # 点の座標に加算
         self.points += vector_array
 
